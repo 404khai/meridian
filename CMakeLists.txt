@@ -28,6 +28,7 @@ endif()
 
 add_library(meridian_core STATIC
     src/book/order_book.cpp
+    src/engine/matching_engine.cpp
 )
 
 target_compile_features(meridian_core PUBLIC cxx_std_20)
@@ -50,4 +51,10 @@ if(BUILD_TESTING)
     )
     target_link_libraries(meridian_tests PRIVATE meridian_core meridian_warnings meridian_sanitizers)
     add_test(NAME meridian_tests COMMAND meridian_tests)
+
+    add_executable(meridian_matching_tests
+        tests/unit/matching_engine_tests.cpp
+    )
+    target_link_libraries(meridian_matching_tests PRIVATE meridian_core meridian_warnings meridian_sanitizers)
+    add_test(NAME meridian_matching_tests COMMAND meridian_matching_tests)
 endif()

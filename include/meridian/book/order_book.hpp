@@ -26,6 +26,8 @@ public:
     // Phase 1 accepts resting limit orders only. Matching is intentionally absent.
     [[nodiscard]] bool insert(Order order);
     [[nodiscard]] bool cancel(OrderId id);
+    // Reduce a resting order after a fill while preserving its queue position.
+    [[nodiscard]] bool reduce_quantity(OrderId id, Qty quantity);
 
     [[nodiscard]] bool empty() const noexcept;
     [[nodiscard]] std::size_t order_count() const noexcept;
