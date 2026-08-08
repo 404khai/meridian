@@ -1,6 +1,7 @@
 #include "meridian/engine/matching_engine.hpp"
 
 #include <algorithm>
+#include <optional>
 
 namespace meridian {
 
@@ -8,10 +9,30 @@ SubmitResult MatchingEngine::submit(const Order& order) {
     SubmitResult result;
     const bool valid_side = order.side() == Side::Buy || order.side() == Side::Sell;
     const bool valid_type = order.type() == OrderType::Limit || order.type() == OrderType::Market;
-    if (!valid_side || !valid_type || book_.contains(order.id()) || order.quantity().value() == 0 ||
+    const bool duplicate_id = book_.contains(order.id());
+    if (!valid_side || !valid_type || duplicate_id || order.quantity().value() == 0 ||
         (order.type() == OrderType::Limit && order.price().value() <= 0)) {
+        const auto reason = !valid_side
+                                ? RejectReason::InvalidSide
+                                : !valid_type
+                                      ? RejectReason::UnsupportedOrderType
+                                      : order.quantity().value() == 0
+                                            ? RejectReason::InvalidQuantity
+                                            : order.type() == OrderType::Limit &&
+                                                      order.price().value() <= 0
+                                                  ? RejectReason::InvalidPrice
+                                                  : RejectReason::DuplicateOrderId;
+        book_.append_event(OrderRejectedEvent{order.id(), reason});
         return result;
     }
+
+    book_.append_event(OrderAcceptedEvent{
+        order.id(),
+        order.side(),
+        order.type(),
+        order.price(),
+        order.quantity(),
+    });
 
     std::uint64_t remaining = order.quantity().value();
     while (remaining > 0) {
@@ -36,11 +57,23 @@ SubmitResult MatchingEngine::submit(const Order& order) {
             resting_order.price(),
             Qty{fill_quantity},
         });
-        const bool reduced = book_.reduce_quantity(resting_order.id(), Qty{fill_quantity});
+        const bool reduced = book_.reduce_quantity_impl(resting_order.id(), Qty{fill_quantity}, false);
         if (!reduced) {
             result.fills.pop_back();
             break;
         }
+        book_.append_event(OrderMatchedEvent{
+            order.id(),
+            resting_order.id(),
+            resting_order.price(),
+            Qty{fill_quantity},
+        });
+        book_.append_event(TradeGeneratedEvent{Trade{
+            order.id(),
+            resting_order.id(),
+            resting_order.price(),
+            Qty{fill_quantity},
+        }});
         remaining -= fill_quantity;
     }
 
@@ -52,7 +85,7 @@ SubmitResult MatchingEngine::submit(const Order& order) {
             order.price(),
             Qty{remaining},
         };
-        if (!book_.insert(remainder)) {
+        if (!book_.insert_impl(remainder, false)) {
             result.fills.clear();
             return result;
         }
@@ -65,6 +98,14 @@ SubmitResult MatchingEngine::submit(const Order& order) {
 
 const OrderBook& MatchingEngine::book() const noexcept {
     return book_;
+}
+
+const EventLog& MatchingEngine::events() const noexcept {
+    return book_.events();
+}
+
+std::vector<Event> MatchingEngine::drain_events() {
+    return book_.drain_events();
 }
 
 bool MatchingEngine::crosses(const Order& order, Price opposing_price) const noexcept {

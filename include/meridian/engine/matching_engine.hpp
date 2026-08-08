@@ -1,19 +1,13 @@
 #pragma once
 
 #include <cstdint>
-#include <optional>
 #include <vector>
 
 #include "meridian/book/order_book.hpp"
 
 namespace meridian {
 
-struct Fill final {
-    OrderId aggressor_id;
-    OrderId resting_id;
-    Price price;
-    Qty quantity;
-};
+using Fill = Trade;
 
 struct SubmitResult final {
     bool accepted{false};
@@ -27,6 +21,8 @@ public:
 
     [[nodiscard]] SubmitResult submit(const Order& order);
     [[nodiscard]] const OrderBook& book() const noexcept;
+    [[nodiscard]] const EventLog& events() const noexcept;
+    [[nodiscard]] std::vector<Event> drain_events();
 
 private:
     [[nodiscard]] bool crosses(const Order& order, Price opposing_price) const noexcept;

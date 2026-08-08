@@ -1,13 +1,20 @@
 #include "meridian/book/order_book.hpp"
 
+#include <utility>
+
 namespace meridian {
 
 bool OrderBook::insert(Order order) {
-    const bool valid_side = order.side() == Side::Buy || order.side() == Side::Sell;
-    if (!valid_side || order.type() != OrderType::Limit || order.quantity().value() == 0 ||
-        order.price().value() <= 0 || contains(order.id())) {
+    const auto reason = validation_error(order, contains(order.id()));
+    if (reason.has_value()) {
+        append_event(OrderRejectedEvent{order.id(), *reason});
         return false;
     }
+
+    return insert_impl(order, true);
+}
+
+bool OrderBook::insert_impl(Order order, bool emit_event) {
 
     order.sequence_ = next_sequence_++;
     auto& levels = levels_for(order.side());
@@ -27,6 +34,16 @@ bool OrderBook::insert(Order order) {
             levels.erase(level_iterator);
         }
         throw;
+    }
+
+    if (emit_event) {
+        append_event(OrderAcceptedEvent{
+            order.id(),
+            order.side(),
+            order.type(),
+            order.price(),
+            order.quantity(),
+        });
     }
 
     return true;
@@ -50,10 +67,16 @@ bool OrderBook::cancel(OrderId id) {
         levels.erase(level_iterator);
     }
 
+    append_event(OrderCancelledEvent{id});
+
     return true;
 }
 
 bool OrderBook::reduce_quantity(OrderId id, Qty quantity) {
+    return reduce_quantity_impl(id, quantity, true);
+}
+
+bool OrderBook::reduce_quantity_impl(OrderId id, Qty quantity, bool emit_event) {
     if (quantity.value() == 0) {
         return false;
     }
@@ -64,14 +87,28 @@ bool OrderBook::reduce_quantity(OrderId id, Qty quantity) {
         return false;
     }
 
-    if (quantity.value() == index_iterator->second.iterator->quantity().value()) {
-        return cancel(id);
+    const Location location = index_iterator->second;
+    const Qty old_quantity = location.iterator->quantity();
+    auto& levels = levels_for(location.side);
+    auto level_iterator = levels.find(location.price);
+    auto& level = level_iterator->second;
+    const Qty new_quantity{old_quantity.value() - quantity.value()};
+    level.quantity -= quantity.value();
+
+    if (new_quantity.value() == 0) {
+        level.orders.erase(location.iterator);
+        order_index_.erase(index_iterator);
+        if (level.orders.empty()) {
+            levels.erase(level_iterator);
+        }
+    } else {
+        location.iterator->quantity_ = new_quantity;
     }
 
-    const Location location = index_iterator->second;
-    auto& level = levels_for(location.side).find(location.price)->second;
-    location.iterator->quantity_ = Qty{location.iterator->quantity().value() - quantity.value()};
-    level.quantity -= quantity.value();
+    if (emit_event) {
+        append_event(OrderReducedEvent{id, old_quantity, new_quantity});
+    }
+
     return true;
 }
 
@@ -102,6 +139,14 @@ bool OrderBook::modify(OrderId id, Price price, Qty quantity) {
     if (old_price == price && quantity_decreased) {
         old_level.quantity -= old_quantity.value() - quantity.value();
         order.quantity_ = quantity;
+        append_event(OrderModifiedEvent{
+            id,
+            old_price,
+            old_quantity,
+            price,
+            quantity,
+            true,
+        });
         return true;
     }
 
@@ -124,7 +169,24 @@ bool OrderBook::modify(OrderId id, Price price, Qty quantity) {
         old_levels.erase(old_level_iterator);
     }
 
+    append_event(OrderModifiedEvent{
+        id,
+        old_price,
+        old_quantity,
+        price,
+        quantity,
+        false,
+    });
+
     return true;
+}
+
+const EventLog& OrderBook::events() const noexcept {
+    return event_log_;
+}
+
+std::vector<Event> OrderBook::drain_events() {
+    return event_log_.drain();
 }
 
 bool OrderBook::empty() const noexcept {
@@ -209,6 +271,31 @@ const OrderBook::PriceLevel* OrderBook::level_at(Side side, Price price) const n
     const auto& levels = levels_for(side);
     const auto iterator = levels.find(price);
     return iterator == levels.end() ? nullptr : &iterator->second;
+}
+
+std::optional<RejectReason> OrderBook::validation_error(
+    const Order& order, bool duplicate_id) noexcept {
+    const bool valid_side = order.side() == Side::Buy || order.side() == Side::Sell;
+    if (!valid_side) {
+        return RejectReason::InvalidSide;
+    }
+    if (order.type() != OrderType::Limit) {
+        return RejectReason::UnsupportedOrderType;
+    }
+    if (order.quantity().value() == 0) {
+        return RejectReason::InvalidQuantity;
+    }
+    if (order.price().value() <= 0) {
+        return RejectReason::InvalidPrice;
+    }
+    if (duplicate_id) {
+        return RejectReason::DuplicateOrderId;
+    }
+    return std::nullopt;
+}
+
+void OrderBook::append_event(Event event) {
+    event_log_.append(std::move(event));
 }
 
 } // namespace meridian
