@@ -69,4 +69,10 @@ if(BUILD_TESTING)
     )
     target_link_libraries(meridian_event_tests PRIVATE meridian_core meridian_warnings meridian_sanitizers)
     add_test(NAME meridian_event_tests COMMAND meridian_event_tests)
+
+    add_executable(meridian_comprehensive_tests
+        tests/integration/phase5_comprehensive_tests.cpp
+    )
+    target_link_libraries(meridian_comprehensive_tests PRIVATE meridian_core meridian_warnings meridian_sanitizers)
+    add_test(NAME meridian_comprehensive_tests COMMAND meridian_comprehensive_tests)
 endif()
