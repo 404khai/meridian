@@ -57,4 +57,10 @@ if(BUILD_TESTING)
     )
     target_link_libraries(meridian_matching_tests PRIVATE meridian_core meridian_warnings meridian_sanitizers)
     add_test(NAME meridian_matching_tests COMMAND meridian_matching_tests)
+
+    add_executable(meridian_modification_tests
+        tests/unit/order_modification_tests.cpp
+    )
+    target_link_libraries(meridian_modification_tests PRIVATE meridian_core meridian_warnings meridian_sanitizers)
+    add_test(NAME meridian_modification_tests COMMAND meridian_modification_tests)
 endif()

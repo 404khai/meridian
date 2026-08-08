@@ -75,6 +75,58 @@ bool OrderBook::reduce_quantity(OrderId id, Qty quantity) {
     return true;
 }
 
+bool OrderBook::modify(OrderId id, Price price, Qty quantity) {
+    if (price.value() <= 0 || quantity.value() == 0) {
+        return false;
+    }
+
+    const auto index_iterator = order_index_.find(id);
+    if (index_iterator == order_index_.end()) {
+        return false;
+    }
+
+    const Location location = index_iterator->second;
+    Order& order = *location.iterator;
+    const Price old_price = location.price;
+    const Qty old_quantity = order.quantity();
+
+    if (old_price == price && old_quantity == quantity) {
+        return true;
+    }
+
+    auto& old_levels = levels_for(location.side);
+    auto old_level_iterator = old_levels.find(old_price);
+    auto& old_level = old_level_iterator->second;
+
+    const bool quantity_decreased = quantity.value() < old_quantity.value();
+    if (old_price == price && quantity_decreased) {
+        old_level.quantity -= old_quantity.value() - quantity.value();
+        order.quantity_ = quantity;
+        return true;
+    }
+
+    auto& new_levels = levels_for(location.side);
+    auto new_level_iterator = new_levels.try_emplace(price).first;
+    auto& new_level = new_level_iterator->second;
+
+    // Splicing is allocation-free and keeps the operation atomic after the
+    // destination price level has been created.
+    new_level.orders.splice(new_level.orders.end(), old_level.orders, location.iterator);
+    order.price_ = price;
+    order.quantity_ = quantity;
+    order.sequence_ = next_sequence_++;
+    new_level.quantity += quantity.value();
+    old_level.quantity -= old_quantity.value();
+    index_iterator->second.price = price;
+    index_iterator->second.iterator = std::prev(new_level.orders.end());
+
+    if (old_level.orders.empty()) {
+        old_levels.erase(old_level_iterator);
+    }
+
+    return true;
+}
+
 bool OrderBook::empty() const noexcept {
     return order_index_.empty();
 }

@@ -23,11 +23,13 @@ public:
     OrderBook(OrderBook&&) = delete;
     OrderBook& operator=(OrderBook&&) = delete;
 
-    // Phase 1 accepts resting limit orders only. Matching is intentionally absent.
+    // Resting orders are positive-quantity limit orders.
     [[nodiscard]] bool insert(Order order);
     [[nodiscard]] bool cancel(OrderId id);
     // Reduce a resting order after a fill while preserving its queue position.
     [[nodiscard]] bool reduce_quantity(OrderId id, Qty quantity);
+    // Apply Phase 3 priority-loss rules for quantity and price changes.
+    [[nodiscard]] bool modify(OrderId id, Price price, Qty quantity);
 
     [[nodiscard]] bool empty() const noexcept;
     [[nodiscard]] std::size_t order_count() const noexcept;
