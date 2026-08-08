@@ -53,6 +53,28 @@ bool OrderBook::cancel(OrderId id) {
     return true;
 }
 
+bool OrderBook::reduce_quantity(OrderId id, Qty quantity) {
+    if (quantity.value() == 0) {
+        return false;
+    }
+
+    const auto index_iterator = order_index_.find(id);
+    if (index_iterator == order_index_.end() ||
+        quantity.value() > index_iterator->second.iterator->quantity().value()) {
+        return false;
+    }
+
+    if (quantity.value() == index_iterator->second.iterator->quantity().value()) {
+        return cancel(id);
+    }
+
+    const Location location = index_iterator->second;
+    auto& level = levels_for(location.side).find(location.price)->second;
+    location.iterator->quantity_ = Qty{location.iterator->quantity().value() - quantity.value()};
+    level.quantity -= quantity.value();
+    return true;
+}
+
 bool OrderBook::empty() const noexcept {
     return order_index_.empty();
 }

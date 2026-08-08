@@ -2,10 +2,10 @@
 
 Meridian is a deterministic C++20 limit order book and matching engine.
 
-The repository is currently implementing Phase 1 from `AGENTS.md`: a
-single-threaded order book with insert, cancel, price-level queries, and
-price-time ordering. Matching, modification, events, networking, and
-concurrency are intentionally not implemented yet.
+The repository has completed Phase 1 and is implementing Phase 2 from
+`AGENTS.md`: deterministic price-time matching for limit and market orders,
+including partial fills. Modification, events, networking, and concurrency
+remain intentionally deferred.
 
 ## Build and test
 
