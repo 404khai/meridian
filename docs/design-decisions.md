@@ -11,3 +11,14 @@ machine-readable output, and comparable throughput counters without adding
 any dependency to `meridian_core` or production executables. Its tests and
 installation rules are disabled. Benchmark builds can be omitted with
 `-DMERIDIAN_BUILD_BENCHMARKS=OFF` for offline or production-only builds.
+
+## DD-002: Single-writer concurrent ingestion
+
+Phase 7 retains the existing `MatchingEngine` as a single-threaded component
+and adds a separate `meridian_concurrency` adapter. Producers communicate with
+one owner thread through a mutex/condition-variable queue and receive results
+through futures. Readers consume atomically published immutable snapshots.
+This makes ownership explicit, preserves the determinism of each concrete
+input sequence, and avoids contaminating the core book with locks. A
+lock-based queue is the deliberate correctness-first baseline; lock-free
+structures remain gated on Phase 8 benchmark evidence.

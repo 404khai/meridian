@@ -2,10 +2,9 @@
 
 Meridian is a deterministic C++20 limit order book and matching engine.
 
-The repository has completed Phases 1 through 6, including reproducible
-single-threaded performance baselines for the book and matching engine.
-Networking and concurrency remain intentionally deferred until the Phase 7
-gate is entered.
+The repository has completed Phases 1 through 7, including thread-safe
+producer/consumer ingestion with a single matching-engine writer and immutable
+snapshots for multiple readers. Networking remains deferred.
 
 ## Build and test
 
@@ -22,6 +21,15 @@ cmake -S . -B build-sanitize -DCMAKE_BUILD_TYPE=Debug \
   -DMERIDIAN_ENABLE_SANITIZERS=ON
 cmake --build build-sanitize
 ctest --test-dir build-sanitize --output-on-failure
+```
+
+To run the concurrent path under ThreadSanitizer:
+
+```sh
+cmake -S . -B build-tsan -DCMAKE_BUILD_TYPE=Debug \
+  -DMERIDIAN_ENABLE_TSAN=ON -DMERIDIAN_BUILD_BENCHMARKS=OFF
+cmake --build build-tsan --parallel
+ctest --test-dir build-tsan --output-on-failure
 ```
 
 ## Benchmarks

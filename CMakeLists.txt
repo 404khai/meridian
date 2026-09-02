@@ -6,7 +6,12 @@ include(CTest)
 include(FetchContent)
 
 option(MERIDIAN_ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
+option(MERIDIAN_ENABLE_TSAN "Enable ThreadSanitizer" OFF)
 option(MERIDIAN_BUILD_BENCHMARKS "Build the Google Benchmark suite" ON)
+
+if(MERIDIAN_ENABLE_SANITIZERS AND MERIDIAN_ENABLE_TSAN)
+    message(FATAL_ERROR "ASan/UBSan and TSan cannot be enabled together")
+endif()
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -26,6 +31,13 @@ add_library(meridian_sanitizers INTERFACE)
 if(MERIDIAN_ENABLE_SANITIZERS AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(meridian_sanitizers INTERFACE -fsanitize=address,undefined -fno-omit-frame-pointer)
     target_link_options(meridian_sanitizers INTERFACE -fsanitize=address,undefined)
+elseif(MERIDIAN_ENABLE_SANITIZERS)
+    message(FATAL_ERROR "ASan/UBSan requires a Clang or GNU-compatible compiler")
+elseif(MERIDIAN_ENABLE_TSAN AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(meridian_sanitizers INTERFACE -fsanitize=thread -fno-omit-frame-pointer)
+    target_link_options(meridian_sanitizers INTERFACE -fsanitize=thread)
+elseif(MERIDIAN_ENABLE_TSAN)
+    message(FATAL_ERROR "TSan requires a Clang or GNU-compatible compiler")
 endif()
 
 add_library(meridian_core STATIC
@@ -36,6 +48,18 @@ add_library(meridian_core STATIC
 target_compile_features(meridian_core PUBLIC cxx_std_20)
 target_include_directories(meridian_core PUBLIC include)
 target_link_libraries(meridian_core PRIVATE meridian_warnings meridian_sanitizers)
+
+find_package(Threads REQUIRED)
+
+add_library(meridian_concurrency STATIC
+    src/concurrency/concurrent_matching_engine.cpp
+)
+target_compile_features(meridian_concurrency PUBLIC cxx_std_20)
+target_include_directories(meridian_concurrency PUBLIC include)
+target_link_libraries(meridian_concurrency
+    PUBLIC meridian_core
+    PRIVATE meridian_warnings meridian_sanitizers Threads::Threads
+)
 
 add_executable(meridian_engine
     src/engine/main.cpp
@@ -97,4 +121,22 @@ if(BUILD_TESTING)
     )
     target_link_libraries(meridian_comprehensive_tests PRIVATE meridian_core meridian_warnings meridian_sanitizers)
     add_test(NAME meridian_comprehensive_tests COMMAND meridian_comprehensive_tests)
+
+    add_executable(meridian_queue_tests
+        tests/unit/blocking_queue_tests.cpp
+    )
+    target_link_libraries(meridian_queue_tests PRIVATE
+        meridian_concurrency meridian_warnings meridian_sanitizers Threads::Threads
+    )
+    add_test(NAME meridian_queue_tests COMMAND meridian_queue_tests)
+    set_tests_properties(meridian_queue_tests PROPERTIES TIMEOUT 30)
+
+    add_executable(meridian_concurrency_tests
+        tests/integration/concurrent_ingestion_tests.cpp
+    )
+    target_link_libraries(meridian_concurrency_tests PRIVATE
+        meridian_concurrency meridian_warnings meridian_sanitizers Threads::Threads
+    )
+    add_test(NAME meridian_concurrency_tests COMMAND meridian_concurrency_tests)
+    set_tests_properties(meridian_concurrency_tests PROPERTIES TIMEOUT 30)
 endif()
