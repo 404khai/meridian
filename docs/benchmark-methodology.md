@@ -44,3 +44,14 @@ The current implementation has one candidate storage design: ordered maps for
 price levels, FIFO lists within a level, and an unordered order-ID index.
 Alternative data structures belong to later benchmark-backed optimization
 work; this suite is their comparison baseline.
+
+## Matching optimization comparison
+
+For the 2026-10-26 comparison, run the unchanged suite at both revisions with
+`--benchmark_min_time=0.2s --benchmark_repetitions=5` and the JSON output flags
+above. The optimized matching cases were additionally confirmed with
+`--benchmark_filter=Matching/ --benchmark_min_time=0.5s
+--benchmark_repetitions=7`. Run measurements serially, with builds and tests
+outside the timed runs. Retain all results, including noisy samples. Batch CPU
+time divided by the order count gives per-match time; these are aggregate
+throughput measurements, not individual-order latency percentiles.
