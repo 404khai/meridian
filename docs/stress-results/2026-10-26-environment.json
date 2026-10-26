@@ -1,0 +1,20 @@
+{
+  "recorded_on": "2026-10-26",
+  "source_revision": "61aa88656d9d19fd1481c8d4c67fdf5f02ca213c",
+  "cpu": "Apple M3, 8 cores",
+  "os": "macOS 27.0 (26A428), arm64",
+  "compiler": "Apple Clang 21.0.0 (clang-2100.3.34.2)",
+  "seed": 8675309,
+  "release_commands": [
+    "./build-release/meridian_stress --mode matching --seconds 60 --seed 8675309 --revision 61aa88656d9d19fd1481c8d4c67fdf5f02ca213c",
+    "./build-release/meridian_stress --mode concurrent --seconds 60 --seed 8675309 --revision 61aa88656d9d19fd1481c8d4c67fdf5f02ca213c"
+  ],
+  "local_sanitizer_command": "ASAN_OPTIONS=halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 ./build-stress-sanitize/meridian_stress --mode both --seconds 300 --seed 8675309 --revision 61aa88656d9d19fd1481c8d4c67fdf5f02ca213c",
+  "notes": [
+    "Release profiles ran serially without other builds or test runs; shared development host, no CPU affinity or isolation.",
+    "Local sanitized timings are diagnostic; optional-build validation ran during this soak.",
+    "Explicit LeakSanitizer evidence comes from the Linux CI workflow, not the local Apple runtime."
+  ],
+  "local_sanitizer_exit_code": 0,
+  "local_sanitizer_stderr_bytes": 0
+}

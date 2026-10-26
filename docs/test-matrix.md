@@ -39,3 +39,11 @@ bounded serialization. Real loopback tests exercise fragmented and pipelined
 commands, multi-client shared state, half-close, reset, oversized input/output,
 delayed readers, client capacity, startup failure, and responsive shutdown. CI
 adds a networking-disabled build and runs socket tests under ASan/UBSan and TSan.
+
+Stress coverage now includes a bounded duration runner with an independent
+vector-based matching oracle, exact per-operation event verification, seeded
+replay, full-depth/FIFO comparisons, concurrent maker/future uniqueness, and
+20000 malformed protocol frames. Checker self-tests inject dropped/duplicated
+events and corrupted trades. Fixed-cycle CTest runs and a separate Linux
+Release/ASan/UBSan/LeakSanitizer soak workflow are documented in
+[stress-testing.md](stress-testing.md).
