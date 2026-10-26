@@ -13,3 +13,10 @@ The Phase 1 book is single-threaded and owns all order state.
 
 Phase 1 accepts positive-quantity limit orders. Market orders are rejected
 until the matching engine exists in Phase 2.
+
+## Matching access
+
+The engine uses a private `best_order` value snapshot of the FIFO head, selected
+from the highest bid or lowest ask. `orders_at()` remains the public full-level
+snapshot query, but matching no longer allocates or traverses that vector for
+every fill. Storage, iterator stability, and modification semantics are unchanged.

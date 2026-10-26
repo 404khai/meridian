@@ -51,3 +51,68 @@ variation at or below 3.21%.
 These values are the required comparison point for later performance work.
 Results from other machines must be reported separately rather than compared
 as if they were measured under the same conditions.
+
+## Matching sweep optimization — 2026-10-26
+
+Before: `8dc62b3` (merged concurrent-ingestion baseline). Optimized source:
+`29140e8a7029e066301b8f507c02c859bc51cd22`. The harness is unchanged.
+
+- Machine: Apple M3, 8 cores; macOS 27.0 (26A428), arm64
+- Compiler: Apple Clang 21.0.0 (clang-2100.3.34.2)
+- Build: CMake Release, warnings as errors, sanitizers disabled
+- Harness: pinned Google Benchmark 1.9.5, one thread
+- Paired full-suite runs: five repetitions, minimum time 0.2 seconds
+- Matching confirmation: seven repetitions, minimum time 0.5 seconds
+
+This is a fresh before/after comparison on the same host and OS. The older
+baseline above ran on a different OS version and is retained for history.
+Times below are median batch CPU nanoseconds divided by items per batch.
+
+| Workload | Items/batch | Before ns/item | After ns/item | Before/after |
+| --- | ---: | ---: | ---: | ---: |
+| Matching/MarketSweep/SingleLevel | 100 | 313.59 | 95.90 | 3.27x |
+| Matching/MarketSweep/SingleLevel | 1,000 | 2086.27 | 72.17 | 28.91x |
+| Matching/MarketSweep/ManyLevels | 100 | 153.42 | 164.94 | 0.93x |
+| Matching/MarketSweep/ManyLevels | 1,000 | 121.26 | 60.69 | 2.00x |
+| OrderBook/Insert/SingleLevel | 1,000 | 53.31 | 53.99 | 0.99x |
+| OrderBook/Insert/SingleLevel | 10,000 | 50.10 | 50.91 | 0.98x |
+| OrderBook/Insert/ManyLevels | 1,000 | 116.67 | 118.33 | 0.99x |
+| OrderBook/Insert/ManyLevels | 10,000 | 89.35 | 91.00 | 0.98x |
+| OrderBook/Lookup/Hit | 1 | 3.80 | 3.77 | 1.01x |
+| OrderBook/Lookup/Miss | 1 | 6.54 | 4.47 | 1.46x |
+| OrderBook/Cancel/SingleLevel | 1,000 | 45.35 | 39.98 | 1.13x |
+| OrderBook/Cancel/SingleLevel | 10,000 | 52.24 | 39.54 | 1.32x |
+
+The 1,000-maker single-level sweep improves from 2.086 ms to 72.17 µs in
+the identical five-repetition runs (28.91x). The longer confirmation run
+measures 52.79 µs (39.52x relative to the measured baseline). A single-level
+sweep now copies N maker values rather than N(N+1)/2 and performs no temporary
+level-vector allocations. Existing fill/event allocations remain.
+
+| Confirmation workload | Median CPU ns/item | CPU-time CV |
+| --- | ---: | ---: |
+| Matching/MarketSweep/SingleLevel/100 | 77.49 | 13.27% |
+| Matching/MarketSweep/SingleLevel/1000 | 52.79 | 0.98% |
+| Matching/MarketSweep/ManyLevels/100 | 109.37 | 6.74% |
+| Matching/MarketSweep/ManyLevels/1000 | 62.59 | 5.78% |
+
+Measurement limits: this shared development host had variable background load.
+The first optimized matching run had CPU-time CVs of 21.18%, 13.60%, 12.47%,
+and 1.14% in table order; the confirmation improves confidence in the large
+single-level result (0.98% CV). The initial 100-order many-level case regressed
+7.51%, while confirmation improved; treat small-workload differences cautiously.
+Baseline lookup-miss and cancellation cases were also noisy (12.98–20.81% CV);
+no speedup is claimed for unchanged book operations. Insertion medians differ
+by less than 2%. No latency percentiles or concurrent-throughput gains are
+claimed. Google Benchmark still cannot read CPU frequency or set affinity on
+this host; its 24 MHz metadata is invalid and is not used in these comparisons.
+
+All raw JSON outputs, including initial noisy measurements:
+
+- [Before](benchmarks/2026-10-26-sweep-before.json)
+- [After, identical settings](benchmarks/2026-10-26-sweep-after.json)
+- [After, longer confirmation](benchmarks/2026-10-26-sweep-after-confirm.json)
+
+Validation: all seven CTest tests pass in Release, Debug, ASan/UBSan, and TSan.
+The added two-sided sweep regression checks FIFO fills and every matched/trade
+event after maker removal, a partial final maker, and final-level deletion.

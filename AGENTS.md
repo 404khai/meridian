@@ -291,8 +291,8 @@ BREAKING CHANGE: none
 ## 6. Branching
 
 - `main` — always buildable, always green (build + full test suite).
-- `phaseN/<short-description>` — feature branches per phase, e.g.
-  `phase2/price-time-matching`.
+- Use descriptive feature branch names, e.g. `optimize-matching-sweeps`.
+  Phase labels are not required in branch names, PR titles, or PR descriptions.
 - No phase's branch merges into `main` until its exit criteria (Section 4)
   are satisfied and CI is green, including the relevant sanitizer variant.
 

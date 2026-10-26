@@ -22,3 +22,15 @@ This makes ownership explicit, preserves the determinism of each concrete
 input sequence, and avoids contaminating the core book with locks. A
 lock-based queue is the deliberate correctness-first baseline; lock-free
 structures remain gated on Phase 8 benchmark evidence.
+
+## DD-003: Remove repeated level snapshots from matching
+
+The recorded benchmark baseline identifies repeated `orders_at()` snapshots as
+the cause of quadratic single-level sweeps. The matcher now copies just the
+best FIFO head through a private book helper. A value snapshot is necessary:
+full fills erase the maker node before match/trade events are emitted. This
+removes the temporary vector allocation and repeated queue traversal without
+changing public queries, storage ownership, or the concurrent adapter. No new
+dependency is introduced. Pools, custom allocators, and lock-free queues remain
+deferred until measurements identify a separate need for them. See the paired
+measurements in `benchmark-results.md`.
