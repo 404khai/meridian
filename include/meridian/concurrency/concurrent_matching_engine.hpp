@@ -9,6 +9,7 @@
 #include <thread>
 #include <utility>
 
+#include "meridian/concurrency/snapshot_store.hpp"
 #include "meridian/concurrency/blocking_queue.hpp"
 #include "meridian/engine/matching_engine.hpp"
 
@@ -49,7 +50,7 @@ private:
 
     MatchingEngine engine_;
     BlockingQueue<std::shared_ptr<Submission>> inbound_;
-    std::shared_ptr<const BookSnapshot> snapshot_;
+    SnapshotStore<BookSnapshot> snapshot_;
     std::thread worker_;
     std::uint64_t processed_submissions_{0};
 };

@@ -24,3 +24,11 @@ The matching unit suite also sweeps 256 same-price makers on each side, checks
 every fill and accepted/matched/trade event in FIFO order after node removal,
 retains a partial final maker, and then removes the last level. Existing
 randomized replay tests continue to check determinism and quantity conservation.
+
+Market-data integration tests compare full depth and top-of-book against the
+source after 1,200 mixed submissions, replay the same event feed, and cover
+direct cancellation/modification/reduction events. They check exact counters
+with injected time, empty/one-sided books, limit and market remainders, failed
+batch rollback, depth overflow, retained snapshots, and concurrent readers.
+CTest also enforces core dependency direction, including when market data is
+disabled; CI exercises Release, Debug, ASan/UBSan, TSan, and the disabled layer.

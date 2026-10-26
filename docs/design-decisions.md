@@ -34,3 +34,25 @@ changing public queries, storage ownership, or the concurrent adapter. No new
 dependency is introduced. Pools, custom allocators, and lock-free queues remain
 deferred until measurements identify a separate need for them. See the paired
 measurements in `benchmark-results.md`.
+
+## DD-004: Batch-based event projection for market data
+
+The optional `meridian_marketdata` target consumes existing events and owns a
+separate resting-order projection. Complete operation batches prevent readers
+from observing a temporarily crossed projection between limit acceptance and
+its fills. `OrderMatchedEvent` changes depth; `TradeGeneratedEvent` changes only
+trade counters. Immutable snapshots use atomic shared-pointer publication for
+reader lifetimes, following the proven concurrent-ingestion ownership pattern.
+Staging the projection gives failed publications rollback semantics at the cost
+of O(N) copying and full depth aggregation per publication. This is a new
+interface, not a performance optimization. Source timing is caller-supplied so
+core remains free of market-data, I/O, and clock instrumentation. No dependency
+is added. The existing concurrent adapter keeps its independent lightweight
+snapshot API; this layer consumes batches from an application-owned source.
+See `market-data.md` for event-feed requirements and observability definitions.
+
+Snapshot publication shares a feature-tested `SnapshotStore` helper between the
+concurrent adapter and market-data publisher. It selects C++20
+`atomic<shared_ptr>` when available and the shared-pointer atomic free functions
+on older libc++; GCC 15 deprecates the latter API even in C++20 mode. Both paths
+retain acquire/release publication and immutable reader lifetimes.

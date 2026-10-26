@@ -7,6 +7,7 @@ include(FetchContent)
 
 option(MERIDIAN_ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
 option(MERIDIAN_ENABLE_TSAN "Enable ThreadSanitizer" OFF)
+option(MERIDIAN_BUILD_MARKETDATA "Build event-driven market-data publishing" ON)
 option(MERIDIAN_BUILD_BENCHMARKS "Build the Google Benchmark suite" ON)
 
 if(MERIDIAN_ENABLE_SANITIZERS AND MERIDIAN_ENABLE_TSAN)
@@ -48,6 +49,16 @@ add_library(meridian_core STATIC
 target_compile_features(meridian_core PUBLIC cxx_std_20)
 target_include_directories(meridian_core PUBLIC include)
 target_link_libraries(meridian_core PRIVATE meridian_warnings meridian_sanitizers)
+
+if(MERIDIAN_BUILD_MARKETDATA)
+    add_library(meridian_marketdata STATIC src/marketdata/market_data_publisher.cpp)
+    target_compile_features(meridian_marketdata PUBLIC cxx_std_20)
+    target_include_directories(meridian_marketdata PUBLIC include)
+    target_link_libraries(meridian_marketdata
+        PUBLIC meridian_core
+        PRIVATE meridian_warnings meridian_sanitizers
+    )
+endif()
 
 find_package(Threads REQUIRED)
 
@@ -92,6 +103,18 @@ if(MERIDIAN_BUILD_BENCHMARKS)
 endif()
 
 if(BUILD_TESTING)
+    add_test(NAME meridian_layering_check COMMAND ${CMAKE_COMMAND}
+        -DSOURCE_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/check_core_dependencies.cmake)
+
+    if(MERIDIAN_BUILD_MARKETDATA)
+        add_executable(meridian_marketdata_tests tests/integration/market_data_tests.cpp)
+        target_link_libraries(meridian_marketdata_tests PRIVATE
+            meridian_marketdata meridian_warnings meridian_sanitizers Threads::Threads)
+        add_test(NAME meridian_marketdata_tests COMMAND meridian_marketdata_tests)
+        set_tests_properties(meridian_marketdata_tests PROPERTIES TIMEOUT 30)
+    endif()
+
     add_executable(meridian_tests
         tests/unit/order_book_tests.cpp
     )
