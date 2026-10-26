@@ -102,4 +102,3 @@ Do not add implementation-mirroring tests for prose-only changes.
   record. Public breaking changes get a Conventional Commit footer.
 - PRs explain concrete behavior, meaningful validation, and known limits.
 - `git diff --check`, the build, and CTest pass before merge.
-
