@@ -119,7 +119,29 @@ if(MERIDIAN_BUILD_BENCHMARKS)
 endif()
 
 if(BUILD_TESTING)
+    add_executable(meridian_stress tests/stress/stress_runner.cpp)
+    target_link_libraries(meridian_stress PRIVATE
+        meridian_concurrency meridian_warnings meridian_sanitizers Threads::Threads)
+    set(stress_profile "${CMAKE_BUILD_TYPE}")
+    if(MERIDIAN_ENABLE_SANITIZERS)
+        string(APPEND stress_profile "-asan-ubsan")
+    elseif(MERIDIAN_ENABLE_TSAN)
+        string(APPEND stress_profile "-tsan")
+    endif()
+    target_compile_definitions(meridian_stress PRIVATE MERIDIAN_STRESS_PROFILE="${stress_profile}")
+    add_test(NAME meridian_stress_self_tests COMMAND meridian_stress --self-test)
+    add_test(NAME meridian_stress_matching COMMAND meridian_stress --mode matching --cycles 4 --seed 42)
+    add_test(NAME meridian_stress_adversarial COMMAND meridian_stress --mode matching --cycles 4 --seed 8675309)
+    add_test(NAME meridian_stress_concurrent COMMAND meridian_stress --mode concurrent --cycles 4)
+    set_tests_properties(meridian_stress_self_tests meridian_stress_matching
+        meridian_stress_adversarial meridian_stress_concurrent PROPERTIES TIMEOUT 60 LABELS stress)
+
     if(MERIDIAN_BUILD_NET)
+        add_executable(meridian_protocol_adversarial_tests tests/stress/protocol_adversarial.cpp)
+        target_link_libraries(meridian_protocol_adversarial_tests PRIVATE
+            meridian_net meridian_warnings meridian_sanitizers)
+        add_test(NAME meridian_protocol_adversarial_tests COMMAND meridian_protocol_adversarial_tests)
+        set_tests_properties(meridian_protocol_adversarial_tests PROPERTIES TIMEOUT 60 LABELS stress)
         add_executable(meridian_protocol_tests tests/unit/protocol_tests.cpp)
         target_link_libraries(meridian_protocol_tests PRIVATE
             meridian_net meridian_warnings meridian_sanitizers)

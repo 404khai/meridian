@@ -59,3 +59,10 @@ engine remains independent; omit the layer with `-DMERIDIAN_BUILD_MARKETDATA=OFF
 Enable with `-DMERIDIAN_BUILD_NET=ON`, then run `meridian_tcp_server 9000` and
 connect to `127.0.0.1:9000`. Networking defaults to disabled. See the
 [protocol, examples, and delivery semantics](docs/network-protocol.md).
+
+## Stress and soak tests
+
+CTest includes seeded oracle/event checks and adversarial workloads. Run
+`meridian_stress --mode both --seconds 300 --seed 8675309` for a longer soak.
+See [workloads and measurement definitions](docs/stress-testing.md) and
+[recorded results](docs/stress-results.md). CI includes Linux leak detection.

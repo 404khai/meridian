@@ -1,0 +1,48 @@
+name: Sustained stress and leak checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: Duration per configuration in seconds (1 through 1200)
+        default: '300'
+        required: true
+jobs:
+  soak:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [off, asan-ubsan]
+    env:
+      SOAK_SECONDS: ${{ inputs.seconds || '120' }}
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+      LSAN_OPTIONS: exitcode=23
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure and build
+        shell: bash
+        run: |
+          flags=(-DCMAKE_BUILD_TYPE=Release -DMERIDIAN_BUILD_BENCHMARKS=OFF -DMERIDIAN_BUILD_NET=ON)
+          if [[ '${{ matrix.sanitizer }}' == 'asan-ubsan' ]]; then
+            flags+=(-DMERIDIAN_ENABLE_SANITIZERS=ON)
+          fi
+          cmake -S . -B build-soak "${flags[@]}"
+          cmake --build build-soak --parallel 2
+      - run: ctest --test-dir build-soak --output-on-failure
+      - name: Sustained matching and concurrent ingestion
+        shell: bash
+        run: |
+          [[ "$SOAK_SECONDS" =~ ^[0-9]+$ ]] && (( SOAK_SECONDS >= 1 && SOAK_SECONDS <= 1200 ))
+          ./build-soak/meridian_stress --mode both --seconds "$SOAK_SECONDS" \
+            --seed 8675309 --revision "$GITHUB_SHA" > soak-results.json
+          cat soak-results.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: soak-${{ matrix.sanitizer }}
+          path: soak-results.json
+          if-no-files-found: error
