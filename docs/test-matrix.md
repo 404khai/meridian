@@ -32,3 +32,10 @@ with injected time, empty/one-sided books, limit and market remainders, failed
 batch rollback, depth overflow, retained snapshots, and concurrent readers.
 CTest also enforces core dependency direction, including when market data is
 disabled; CI exercises Release, Debug, ASan/UBSan, TSan, and the disabled layer.
+
+The optional networking suites verify strict line parsing, numeric boundaries,
+price/FIFO fills, deterministic response replay, book admission limits, and
+bounded serialization. Real loopback tests exercise fragmented and pipelined
+commands, multi-client shared state, half-close, reset, oversized input/output,
+delayed readers, client capacity, startup failure, and responsive shutdown. CI
+adds a networking-disabled build and runs socket tests under ASan/UBSan and TSan.
