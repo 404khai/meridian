@@ -2,9 +2,10 @@
 
 Meridian is a deterministic C++20 limit order book and matching engine.
 
-The repository has completed Phases 1 through 7, including thread-safe
-producer/consumer ingestion with a single matching-engine writer and immutable
-snapshots for multiple readers. Networking remains deferred.
+The repository includes thread-safe producer/consumer ingestion, a single
+matching-engine writer, benchmark-backed matching improvements, and optional
+event-driven market-data snapshots with full depth and observability counters.
+Networking remains deferred.
 
 ## Build and test
 
@@ -45,3 +46,10 @@ cmake --build build-release --target meridian_benchmarks --parallel
 
 See `docs/benchmark-methodology.md` and `docs/benchmark-results.md` for the
 reproducible run configuration and recorded baseline.
+
+## Market data
+
+Link `meridian_marketdata` to consume complete engine event batches and publish
+immutable best bid/ask, spread, depth, throughput, and latency snapshots for
+readers. See [the feed contract and example](docs/market-data.md). The core
+engine remains independent; omit the layer with `-DMERIDIAN_BUILD_MARKETDATA=OFF`.

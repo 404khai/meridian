@@ -1,0 +1,34 @@
+name: Build and test
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - config: release
+            os: ubuntu-latest
+          - config: debug
+            os: ubuntu-latest
+          - config: asan-ubsan
+            os: ubuntu-latest
+          - config: tsan
+            os: macos-15
+          - config: without-marketdata
+            os: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        shell: bash
+        run: |
+          flags=(-DCMAKE_BUILD_TYPE=Debug -DMERIDIAN_BUILD_BENCHMARKS=OFF)
+          case '${{ matrix.config }}' in
+            release) flags+=(-DCMAKE_BUILD_TYPE=Release) ;;
+            asan-ubsan) flags+=(-DMERIDIAN_ENABLE_SANITIZERS=ON) ;;
+            tsan) flags+=(-DMERIDIAN_ENABLE_TSAN=ON) ;;
+            without-marketdata) flags+=(-DMERIDIAN_BUILD_MARKETDATA=OFF) ;;
+          esac
+          cmake -S . -B build "${flags[@]}"
+      - run: cmake --build build --parallel 2
+      - run: ctest --test-dir build --output-on-failure

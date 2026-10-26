@@ -78,3 +78,13 @@ ctest --test-dir build-tsan --output-on-failure
 
 ASan/UBSan and TSan are mutually exclusive build modes. CMake rejects enabling
 both in one build directory.
+
+## Market-data publication
+
+`MarketDataPublisher` separately supports one event-consumer writer and multiple
+immutable-snapshot readers. It receives complete operation batches from an
+application-owned source and publishes after projection and aggregation succeed.
+The existing concurrent ingestion adapter still exposes its original lightweight
+`BookSnapshot`; its worker does not expose an event feed. Market-data wiring
+belongs outside the core. See [market-data.md](market-data.md) for ownership,
+feed boundaries, memory costs, and reader lifetime requirements.
