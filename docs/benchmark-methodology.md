@@ -2,8 +2,8 @@
 
 ## Purpose
 
-These benchmarks establish the Phase 6 single-threaded baseline. They are not
-optimization claims. Future performance changes must rerun the same workloads
+These benchmarks establish the single-threaded baseline and its measured
+matching optimization comparison. Future performance changes must rerun the same workloads
 on comparable hardware and include before/after results.
 
 ## Build and run
@@ -55,3 +55,28 @@ above. The optimized matching cases were additionally confirmed with
 outside the timed runs. Retain all results, including noisy samples. Batch CPU
 time divided by the order count gives per-match time; these are aggregate
 throughput measurements, not individual-order latency percentiles.
+
+## Units and interpretation
+
+Google Benchmark reports CPU and wall times per benchmark iteration. Insert,
+cancel, and sweep iterations process a whole batch; divide median CPU time by
+its item count for the per-item table. Lookup iterations perform one query.
+Throughput counters use inserted/looked-up/cancelled/matched orders, not submitted
+aggressors: a 1000-maker sweep is one submission but 1000 measured items.
+A median of batch averages is not a p50 individual-order latency, and aggregate
+repetition variability is not a p99 tail. Timing pauses exclude fixture work
+but not normal fill/event generation. No CPU-affinity guarantee exists on the
+recorded macOS host.
+
+The optimized matcher is source revision `29140e8`; the paired baseline is
+`8dc62b3`. Full tables retain unchanged operations and noisy/regressing cases,
+not only improvements. The longer confirmation uses different repetition/time
+settings and is distinguished from the like-for-like comparison. The original
+September baseline remains historical; its OS differs from the October runs.
+Raw JSON is linked in [benchmark-results.md](benchmark-results.md).
+
+For individual submit/completion latency under verified load, use the separate
+[stress methodology](stress-testing.md) and [results](stress-results.md). Those
+closed-loop workloads include validation overhead in throughput and histogram
+quantization in percentiles. No storage/allocator alternative has been measured,
+and market-data or TCP throughput has not been characterized by these suites.

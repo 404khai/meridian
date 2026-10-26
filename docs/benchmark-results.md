@@ -36,17 +36,17 @@ comes from a ten-repetition rerun: 557,449 ns median batch CPU time, 55.74 ns
 per item, and 1.91% coefficient of variation. All other cases had CPU-time
 variation at or below 3.21%.
 
-## Baseline observations
+## Historical baseline observations
 
 - Indexed lookup and cancellation show stable constant-time behavior at the
   tested 10,000-order size.
 - Insertion into one existing level is cheaper than insertion distributed
   across many ordered-map levels.
 - The single-level 1,000-order sweep is substantially slower per match than
-  the 100-order case. The current matcher calls `orders_at()` for each fill,
+  the 100-order case. The baseline matcher called `orders_at()` for each fill,
   which copies the remaining price-level queue; this workload exposes that
-  scaling cost. It is recorded as a future optimization candidate, but Phase 6
-  intentionally makes no performance-motivated production changes.
+  scaling cost. This identified the optimization candidate addressed in the October
+  comparison below; the original baseline intentionally changed no production code.
 
 These values are the required comparison point for later performance work.
 Results from other machines must be reported separately rather than compared
