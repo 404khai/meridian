@@ -56,3 +56,18 @@ concurrent adapter and market-data publisher. It selects C++20
 `atomic<shared_ptr>` when available and the shared-pointer atomic free functions
 on older libc++; GCC 15 deprecates the latter API even in C++20 mode. Both paths
 retain acquire/release publication and immutable reader lifetimes.
+
+## DD-005: Optional single-owner POSIX TCP adapter
+
+`meridian_net` owns a separate matching session behind a bounded line protocol.
+A nonblocking `poll` loop serializes requests from multiple loopback clients on
+one thread. This reuses deterministic core semantics without adding transport
+concerns or callbacks to core, and avoids a dependency on a networking library.
+Client count, input/output buffers, resting-order count, and quantity admission
+are explicitly bounded. Slow or disconnected clients cannot block socket I/O
+on the matching owner; write errors never roll back executed orders. Linux
+uses `MSG_NOSIGNAL`, while macOS uses `SO_NOSIGPIPE`, to avoid process termination
+on broken connections. Networking defaults off and can be fully excluded. The
+initial adapter intentionally offers submission and book queries only, with no
+market-data fanout or durable replay identity. See `network-protocol.md` for
+framing, limits, ownership, failure handling, and uncertain-delivery semantics.

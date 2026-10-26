@@ -15,6 +15,8 @@ jobs:
             os: ubuntu-latest
           - config: tsan
             os: macos-15
+          - config: without-net
+            os: ubuntu-latest
           - config: without-marketdata
             os: ubuntu-latest
     steps:
@@ -22,11 +24,12 @@ jobs:
       - name: Configure
         shell: bash
         run: |
-          flags=(-DCMAKE_BUILD_TYPE=Debug -DMERIDIAN_BUILD_BENCHMARKS=OFF)
+          flags=(-DCMAKE_BUILD_TYPE=Debug -DMERIDIAN_BUILD_BENCHMARKS=OFF -DMERIDIAN_BUILD_NET=ON)
           case '${{ matrix.config }}' in
             release) flags+=(-DCMAKE_BUILD_TYPE=Release) ;;
             asan-ubsan) flags+=(-DMERIDIAN_ENABLE_SANITIZERS=ON) ;;
             tsan) flags+=(-DMERIDIAN_ENABLE_TSAN=ON) ;;
+            without-net) flags+=(-DMERIDIAN_BUILD_NET=OFF) ;;
             without-marketdata) flags+=(-DMERIDIAN_BUILD_MARKETDATA=OFF) ;;
           esac
           cmake -S . -B build "${flags[@]}"

@@ -7,6 +7,7 @@ include(FetchContent)
 
 option(MERIDIAN_ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
 option(MERIDIAN_ENABLE_TSAN "Enable ThreadSanitizer" OFF)
+option(MERIDIAN_BUILD_NET "Build the optional POSIX loopback TCP adapter" OFF)
 option(MERIDIAN_BUILD_MARKETDATA "Build event-driven market-data publishing" ON)
 option(MERIDIAN_BUILD_BENCHMARKS "Build the Google Benchmark suite" ON)
 
@@ -72,6 +73,21 @@ target_link_libraries(meridian_concurrency
     PRIVATE meridian_warnings meridian_sanitizers Threads::Threads
 )
 
+if(MERIDIAN_BUILD_NET)
+    if(NOT UNIX)
+        message(FATAL_ERROR "The TCP adapter currently requires POSIX sockets")
+    endif()
+    add_library(meridian_net STATIC src/net/protocol.cpp src/net/tcp_server.cpp)
+    target_compile_features(meridian_net PUBLIC cxx_std_20)
+    target_include_directories(meridian_net PUBLIC include)
+    target_link_libraries(meridian_net
+        PUBLIC meridian_core
+        PRIVATE meridian_warnings meridian_sanitizers Threads::Threads)
+    add_executable(meridian_tcp_server src/net/main.cpp)
+    target_link_libraries(meridian_tcp_server PRIVATE
+        meridian_net meridian_warnings meridian_sanitizers)
+endif()
+
 add_executable(meridian_engine
     src/engine/main.cpp
 )
@@ -103,6 +119,18 @@ if(MERIDIAN_BUILD_BENCHMARKS)
 endif()
 
 if(BUILD_TESTING)
+    if(MERIDIAN_BUILD_NET)
+        add_executable(meridian_protocol_tests tests/unit/protocol_tests.cpp)
+        target_link_libraries(meridian_protocol_tests PRIVATE
+            meridian_net meridian_warnings meridian_sanitizers)
+        add_test(NAME meridian_protocol_tests COMMAND meridian_protocol_tests)
+        add_executable(meridian_tcp_tests tests/integration/tcp_server_tests.cpp)
+        target_link_libraries(meridian_tcp_tests PRIVATE
+            meridian_net meridian_warnings meridian_sanitizers Threads::Threads)
+        add_test(NAME meridian_tcp_tests COMMAND meridian_tcp_tests)
+        set_tests_properties(meridian_protocol_tests meridian_tcp_tests PROPERTIES TIMEOUT 30)
+    endif()
+
     add_test(NAME meridian_layering_check COMMAND ${CMAKE_COMMAND}
         -DSOURCE_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
         -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/check_core_dependencies.cmake)

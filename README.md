@@ -5,7 +5,7 @@ Meridian is a deterministic C++20 limit order book and matching engine.
 The repository includes thread-safe producer/consumer ingestion, a single
 matching-engine writer, benchmark-backed matching improvements, and optional
 event-driven market-data snapshots with full depth and observability counters.
-Networking remains deferred.
+An optional POSIX loopback TCP adapter provides bounded text-protocol order entry.
 
 ## Build and test
 
@@ -53,3 +53,9 @@ Link `meridian_marketdata` to consume complete engine event batches and publish
 immutable best bid/ask, spread, depth, throughput, and latency snapshots for
 readers. See [the feed contract and example](docs/market-data.md). The core
 engine remains independent; omit the layer with `-DMERIDIAN_BUILD_MARKETDATA=OFF`.
+
+## TCP order entry
+
+Enable with `-DMERIDIAN_BUILD_NET=ON`, then run `meridian_tcp_server 9000` and
+connect to `127.0.0.1:9000`. Networking defaults to disabled. See the
+[protocol, examples, and delivery semantics](docs/network-protocol.md).

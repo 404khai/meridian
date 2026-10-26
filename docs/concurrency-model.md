@@ -88,3 +88,14 @@ The existing concurrent ingestion adapter still exposes its original lightweight
 `BookSnapshot`; its worker does not expose an event feed. Market-data wiring
 belongs outside the core. See [market-data.md](market-data.md) for ownership,
 feed boundaries, memory costs, and reader lifetime requirements.
+
+## TCP ownership boundary
+
+The optional TCP server has its own single-owner matching session. One
+nonblocking poll loop processes clients serially; it does not submit to the
+existing producer/consumer adapter. Per-client commands retain FIFO order;
+cross-client execution order follows event-loop readiness/traversal. No mutable
+engine reference escapes, and socket I/O never blocks the owner. Worker-using
+applications must request stop and join before server destruction. See
+[network-protocol.md](network-protocol.md) for bounded buffers, uncertain
+delivery, and adapter lifecycle.
