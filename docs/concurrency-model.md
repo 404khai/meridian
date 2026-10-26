@@ -1,4 +1,4 @@
-# Phase 7 concurrency model
+# Concurrency model
 
 ## Ownership and data flow
 
@@ -10,9 +10,9 @@ single-threaded `MatchingEngine`. It does not make the book itself concurrent.
    `BlockingQueue`.
 3. One dedicated worker thread removes requests and is the only thread that
    owns or calls `MatchingEngine`.
-4. The worker publishes the result through the producer's `std::future`.
-5. After each processed request, the worker atomically publishes an immutable
+4. After each processed request, the worker atomically publishes an immutable
    `BookSnapshot` for readers.
+5. The worker then makes the producer's `std::future` ready with the result.
 
 This preserves all proven single-threaded matching semantics. The concrete
 queue order is the deterministic input sequence. Calls made by one producer
@@ -26,13 +26,12 @@ multiple producers. The worker blocks in `wait_pop()` without polling. Closing
 the queue rejects later pushes, wakes an empty consumer, and still permits all
 already-enqueued requests to drain.
 
-The Phase 7 queue is unbounded. Producers are responsible for controlling
+The queue is unbounded. Producers are responsible for controlling
 admission volume; bounded backpressure policy requires workload evidence and
-is not chosen implicitly in this phase.
+is not implemented by this adapter.
 
-The queue is intentionally lock-based. Phase 7 proves ownership and race-free
-semantics first; lock-free queues and allocator changes are Phase 8 work and
-require evidence against the Phase 6 benchmark baseline.
+The queue is intentionally lock-based. Lock-free queues and custom allocators
+remain unimplemented; changing that requires benchmark evidence.
 
 ## Single writer and multiple readers
 
@@ -46,7 +45,7 @@ bid/ask, order and level counts, and a monotonically increasing processed
 submission count. Their immutability allows any number of readers to retain and
 inspect a view without locking or racing with later publications.
 
-This is a concurrency-state view, not the Phase 9 market-data interface. It
+This is a concurrency-state view, separate from full-depth market data. It
 does not publish depth, trades, or external protocol data.
 
 ## Shutdown
@@ -58,7 +57,7 @@ methods concurrently with destruction.
 
 ## Testing and sanitizer contract
 
-Phase 7 tests cover:
+The original concurrency suites cover:
 
 - 20,000 items through four queue producers and one consumer;
 - 4,000 non-crossing orders from eight producers while four readers inspect
@@ -99,3 +98,8 @@ engine reference escapes, and socket I/O never blocks the owner. Worker-using
 applications must request stop and join before server destruction. See
 [network-protocol.md](network-protocol.md) for bounded buffers, uncertain
 delivery, and adapter lifecycle.
+
+The private event log is retained until adapter destruction; there is no public
+event-drain API. Both the queue and retained history can grow with lifetime
+traffic. [Memory strategy](memory-strategy.md) and [known limitations](known-limitations.md)
+distinguish finite lifecycle stress evidence from bounded long-lived operation.

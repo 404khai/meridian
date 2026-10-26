@@ -1,4 +1,4 @@
-# Phase 2 matching algorithm
+# Matching algorithm
 
 `MatchingEngine::submit` treats each submitted order as the aggressor and
 matches it against the opposite side of the `OrderBook`.
@@ -9,7 +9,7 @@ matches it against the opposite side of the `OrderBook`.
    orders continue until their quantity is filled or the opposing side is
    empty.
 3. Consume the first order at the selected level. Orders at one price level
-   are already stored FIFO by Phase 1, so this gives deterministic price-time
+   are already stored FIFO in the book, so this gives deterministic price-time
    priority.
 4. Reduce the resting order quantity. A partial fill retains its list
    position; a full fill removes the order.
@@ -26,3 +26,9 @@ vectors retain their normal allocations.
 
 The returned `Fill` sequence and accepted/matched/trade event sequence are
 deterministic for a deterministic submission sequence.
+
+Validation happens before matching and emits one rejection on failure. Accepted
+orders emit acceptance first, then a matched/trade pair per fill. The engine
+exposes a const book view; direct book modifications are a separate interface
+and do not invoke this matching loop. See [order flows](order-flows.md),
+[event contracts](events.md), and [limits](known-limitations.md).
