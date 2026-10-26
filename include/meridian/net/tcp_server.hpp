@@ -1,9 +1,9 @@
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <stop_token>
 #include <string>
 #include <vector>
 
@@ -27,7 +27,7 @@ public:
 
     [[nodiscard]] std::uint16_t port() const noexcept { return port_; }
     void poll_once(std::chrono::milliseconds timeout = std::chrono::milliseconds{50});
-    void run(std::stop_token stop);
+    void run(const std::atomic<bool>& stopped);
 
 private:
     struct Client final {

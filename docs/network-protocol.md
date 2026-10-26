@@ -130,14 +130,14 @@ There is no claim to recover matching from allocation failure.
 ## Ownership and integration
 
 `TcpServer` owns a `ProtocolSession` and its `MatchingEngine`. Exactly one thread
-calls `poll_once` or `run(stop_token)`. All commands execute serially on that
+calls `poll_once` or `run(const std::atomic<bool>& stopped)`. All commands execute serially on that
 thread; per-connection order is FIFO. Cross-connection ordering is determined by
 the event loop and is not a client-arrival-time guarantee. The same concrete
 execution sequence retains the core's deterministic behavior.
 
 Accepted sockets are nonblocking and close-on-exec. Polling is bounded to 50 ms
 in `run`; reads and accepts have bounded work per iteration. The owning
-application stops and joins its worker before destroying the server. `port()`
+application stores `true` to its stop flag and joins its worker before destroying the server. `port()`
 is immutable after construction and can be used by a client thread. Other
 server/session methods do not support concurrent callers.
 

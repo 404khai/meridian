@@ -190,8 +190,8 @@ void TcpServer::poll_once(std::chrono::milliseconds timeout) {
     }
 }
 
-void TcpServer::run(std::stop_token stop) {
-    while (!stop.stop_requested()) {
+void TcpServer::run(const std::atomic<bool>& stopped) {
+    while (!stopped.load(std::memory_order_acquire)) {
         poll_once();
     }
 }

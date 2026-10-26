@@ -1,6 +1,7 @@
 #include "meridian/net/tcp_server.hpp"
 
 #include <array>
+#include <atomic>
 #include <cerrno>
 #include <chrono>
 #include <cstdlib>
@@ -97,19 +98,20 @@ private:
 
 class RunningServer final {
 public:
-    RunningServer() : worker_([this](std::stop_token stop) {
-        try { server.run(stop); }
+    RunningServer() : worker_([this] {
+        try { server.run(stopped_); }
         catch (...) { failure_ = std::current_exception(); }
     }) {}
     ~RunningServer() {
-        worker_.request_stop();
+        stopped_.store(true, std::memory_order_release);
         worker_.join();
         require(!failure_, "server thread completed without failure");
     }
     TcpServer server;
 private:
     std::exception_ptr failure_;
-    std::jthread worker_;
+    std::atomic<bool> stopped_{false};
+    std::thread worker_;
 };
 
 void framing_and_shared_book() {
