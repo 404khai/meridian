@@ -44,7 +44,7 @@ MarketDataPublisher::MarketDataPublisher(Clock::time_point started)
       snapshot_(std::make_shared<const MarketDataSnapshot>()) {}
 
 std::shared_ptr<const MarketDataSnapshot> MarketDataPublisher::snapshot() const noexcept {
-    return std::atomic_load_explicit(&snapshot_, std::memory_order_acquire);
+    return snapshot_.load();
 }
 
 void MarketDataPublisher::reduce(Orders& orders, OrderId id, Qty quantity) {
@@ -175,7 +175,7 @@ void MarketDataPublisher::publish(std::span<const Event> events,
     orders_.swap(orders);
     last_observed_ = observed;
     std::shared_ptr<const MarketDataSnapshot> published = std::move(next);
-    std::atomic_store_explicit(&snapshot_, std::move(published), std::memory_order_release);
+    snapshot_.store(std::move(published));
 }
 
 } // namespace meridian

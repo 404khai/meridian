@@ -50,3 +50,9 @@ core remains free of market-data, I/O, and clock instrumentation. No dependency
 is added. The existing concurrent adapter keeps its independent lightweight
 snapshot API; this layer consumes batches from an application-owned source.
 See `market-data.md` for event-feed requirements and observability definitions.
+
+Snapshot publication shares a feature-tested `SnapshotStore` helper between the
+concurrent adapter and market-data publisher. It selects C++20
+`atomic<shared_ptr>` when available and the shared-pointer atomic free functions
+on older libc++; GCC 15 deprecates the latter API even in C++20 mode. Both paths
+retain acquire/release publication and immutable reader lifetimes.

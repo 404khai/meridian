@@ -28,7 +28,7 @@ std::future<SubmitResult> ConcurrentMatchingEngine::submit(Order order) {
 }
 
 std::shared_ptr<const BookSnapshot> ConcurrentMatchingEngine::snapshot() const noexcept {
-    return std::atomic_load_explicit(&snapshot_, std::memory_order_acquire);
+    return snapshot_.load();
 }
 
 void ConcurrentMatchingEngine::run() {
@@ -54,7 +54,7 @@ void ConcurrentMatchingEngine::publish_snapshot() {
         book.level_count(Side::Sell),
         processed_submissions_,
     });
-    std::atomic_store_explicit(&snapshot_, std::move(next), std::memory_order_release);
+    snapshot_.store(std::move(next));
 }
 
 } // namespace meridian

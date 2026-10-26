@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "meridian/concurrency/snapshot_store.hpp"
 #include "meridian/events/event.hpp"
 
 namespace meridian {
@@ -80,7 +81,7 @@ private:
     Clock::time_point started_;
     Clock::time_point last_observed_;
     Orders orders_;
-    std::shared_ptr<const MarketDataSnapshot> snapshot_;
+    SnapshotStore<MarketDataSnapshot> snapshot_;
 };
 
 } // namespace meridian
