@@ -16,5 +16,13 @@ matches it against the opposite side of the `OrderBook`.
 5. Rest any unfilled limit-order remainder at its original price. Market-order
    remainders are discarded because they cannot rest in the book.
 
-The returned `Fill` sequence is deterministic for a deterministic submission
-sequence. Trade/event queues are intentionally deferred to Phase 4.
+The matcher privately copies only the FIFO head of the best opposing level.
+The value copy survives full-fill removal, so subsequent match and trade events
+can safely use its ID and price. No list iterator or reference escapes to the
+matcher. Selecting a head takes constant time and no allocation; a sweep of N
+orders at one price copies N orders instead of N(N+1)/2. Book reduction still
+performs its existing indexed lookup and price-level map lookup. Fill and event
+vectors retain their normal allocations.
+
+The returned `Fill` sequence and accepted/matched/trade event sequence are
+deterministic for a deterministic submission sequence.

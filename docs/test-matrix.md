@@ -19,3 +19,8 @@ book and matching engine.
 The randomized generator uses a fixed seed so failures are reproducible. The
 stress cases use synthetic orders and remain single-threaded, as required by
 the phase gates in `AGENTS.md`.
+
+The matching unit suite also sweeps 256 same-price makers on each side, checks
+every fill and accepted/matched/trade event in FIFO order after node removal,
+retains a partial final maker, and then removes the last level. Existing
+randomized replay tests continue to check determinism and quantity conservation.

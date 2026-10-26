@@ -36,19 +36,13 @@ SubmitResult MatchingEngine::submit(const Order& order) {
 
     std::uint64_t remaining = order.quantity().value();
     while (remaining > 0) {
-        const std::optional<Price> opposing_price =
-            order.side() == Side::Buy ? book_.best_ask() : book_.best_bid();
-        if (!opposing_price.has_value() || !crosses(order, *opposing_price)) {
+        const auto resting =
+            book_.best_order(order.side() == Side::Buy ? Side::Sell : Side::Buy);
+        if (!resting.has_value() || !crosses(order, resting->price())) {
             break;
         }
 
-        const std::vector<Order> resting_orders =
-            book_.orders_at(order.side() == Side::Buy ? Side::Sell : Side::Buy, *opposing_price);
-        if (resting_orders.empty()) {
-            break;
-        }
-
-        const Order& resting_order = resting_orders.front();
+        const Order& resting_order = *resting;
         const std::uint64_t fill_quantity =
             std::min(remaining, resting_order.quantity().value());
         result.fills.push_back(Fill{

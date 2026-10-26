@@ -64,6 +64,8 @@ private:
         OrderQueue::iterator iterator;
     };
 
+    // Copy the best FIFO head so it survives a full fill and node removal.
+    [[nodiscard]] std::optional<Order> best_order(Side side) const;
     [[nodiscard]] Levels& levels_for(Side side) noexcept;
     [[nodiscard]] const Levels& levels_for(Side side) const noexcept;
     [[nodiscard]] PriceLevel* level_at(Side side, Price price) noexcept;

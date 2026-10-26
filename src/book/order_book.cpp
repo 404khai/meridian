@@ -253,6 +253,16 @@ std::vector<Order> OrderBook::orders_at(Side side, Price price) const {
     return orders;
 }
 
+std::optional<Order> OrderBook::best_order(Side side) const {
+    const auto& levels = levels_for(side);
+    if (levels.empty()) {
+        return std::nullopt;
+    }
+
+    const auto level = side == Side::Buy ? std::prev(levels.end()) : levels.begin();
+    return level->second.orders.front();
+}
+
 OrderBook::Levels& OrderBook::levels_for(Side side) noexcept {
     return side == Side::Buy ? bids_ : asks_;
 }

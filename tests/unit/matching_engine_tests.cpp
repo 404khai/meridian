@@ -119,9 +119,58 @@ void rejects_duplicate_ids_before_matching() {
             "duplicate rejection leaves original quantity intact");
 }
 
+void large_sweeps_preserve_fifo_and_events() {
+    for (const Side resting_side : {Side::Buy, Side::Sell}) {
+        MatchingEngine engine;
+        constexpr std::uint64_t count = 256;
+        for (std::uint64_t id = 1; id <= count; ++id) {
+            require(engine.submit(order(id, resting_side, OrderType::Limit, 100, 2)).accepted,
+                    "sweep fixture accepted");
+        }
+        (void)engine.drain_events();
+        const Side aggressor_side = resting_side == Side::Buy ? Side::Sell : Side::Buy;
+        const auto result = engine.submit(
+            order(count + 1, aggressor_side, OrderType::Market, 0, 2 * count - 1));
+        require(result.accepted && result.remaining == Qty{0}, "large sweep completes");
+        require(result.fills.size() == count, "each FIFO maker produces a fill");
+        const auto events = engine.drain_events();
+        require(events.size() == 1 + 2 * count, "accepted then matched/trade event pairs");
+        require(std::get<meridian::OrderAcceptedEvent>(events[0]).id == OrderId{count + 1},
+                "aggressor accepted first");
+        for (std::uint64_t index = 0; index < count; ++index) {
+            const Qty quantity{index + 1 == count ? 1U : 2U};
+            const auto& fill = result.fills[index];
+            const auto& matched = std::get<meridian::OrderMatchedEvent>(events[1 + 2 * index]);
+            const auto& trade = std::get<meridian::TradeGeneratedEvent>(events[2 + 2 * index]).trade;
+            require(fill.resting_id == OrderId{index + 1} && fill.price == Price{100} &&
+                        fill.quantity == quantity && fill.aggressor_id == OrderId{count + 1},
+                    "large sweep fills retain FIFO maker values");
+            require(matched.resting_id == fill.resting_id && matched.price == fill.price &&
+                        matched.quantity == fill.quantity && matched.aggressor_id == fill.aggressor_id,
+                    "match event retains maker values after node removal");
+            require(trade.resting_id == fill.resting_id && trade.price == fill.price &&
+                        trade.quantity == fill.quantity && trade.aggressor_id == fill.aggressor_id,
+                    "trade event retains maker values after node removal");
+        }
+        require(engine.book().order_count() == 1 &&
+                    engine.book().find(OrderId{count})->quantity() == Qty{1},
+                "partially filled final maker remains");
+        const auto final_fill = engine.submit(
+            order(count + 2, aggressor_side, OrderType::Market, 0, 1));
+        require(final_fill.fills.size() == 1 &&
+                    final_fill.fills[0].resting_id == OrderId{count} && engine.book().empty(),
+                "final fill removes the last price level");
+        const auto empty = engine.submit(
+            order(count + 3, aggressor_side, OrderType::Market, 0, 1));
+        require(empty.accepted && empty.fills.empty() && empty.remaining == Qty{1},
+                "empty opposing side terminates matching");
+    }
+}
+
 } // namespace
 
 int main() {
+    large_sweeps_preserve_fifo_and_events();
     matches_best_price_before_worse_prices();
     preserves_fifo_priority_within_a_price();
     rests_limit_remainder_and_does_not_cross();
