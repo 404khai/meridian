@@ -104,7 +104,7 @@ reporting. Sanitized timing is diagnostic only.
   64 ns); exact maxima are also recorded. Zero-duration clock samples map to 1 ns.
   No unbounded sample vector, downsampling, or per-operation output is used.
 - Checksums exclude timings and cross-producer scheduling. Equal seeded direct
-  prefixes have equal input/result checksums (events are checked separately); duration runs with different cycle
+  prefixes have equal result checksums (events are checked separately); duration runs with different cycle
   counts naturally differ.
 
 Record source revision, CPU/OS/compiler, build/sanitizer flags, seed, duration,

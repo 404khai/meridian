@@ -1,0 +1,8 @@
+{
+  "run_url": "https://github.com/404khai/meridian/actions/runs/40400585812",
+  "conclusion": "success",
+  "linux_leak_detection_enabled": true,
+  "leak_exit_code": 23,
+  "sanitizer_error_patterns_found": false,
+  "notes": "Successful Release and Release ASan/UBSan/LeakSanitizer jobs; exact run environment and full logs are available at the linked run. The JSON revisions identify GitHub PR merge snapshots."
+}
